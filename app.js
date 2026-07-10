@@ -29,6 +29,16 @@
   const SPECIAL_RANKS = new Set(["2", "7", "8", "J", "Q", "K", "A"]);
   const WILD_8_MODES = ["rank-match", "suit-match"];
   const STARTING_HAND_SIZE = { 2: 7, 3: 7, 4: 5 };
+  const MOTION_PACE_BY_VARIANT = {
+    deal: 1.3,
+    submit: 1.7,
+    capture: 1.75,
+    banish: 1.6,
+    reserve: 1.5,
+    discard: 1.55,
+    draw: 1.55,
+    travel: 1.55,
+  };
   const PHASE_LABELS = {
     start: "Start",
     choose: "Choose cards",
@@ -416,8 +426,8 @@
     addLog("round", `Round 1 begins.`);
 
     prepareRound();
-    scheduleAction(80, animateShuffleDeck);
-    scheduleAction(1080, animateOpeningDeal);
+    scheduleAction(120, animateShuffleDeck);
+    scheduleAction(2800, animateOpeningDeal);
     render();
   }
 
@@ -502,8 +512,8 @@
     // Two riffle passes, each with a left-pile and right-pile fan then merge
     const riffles = 2;
     const cardsPerPile = 5;
-    const riffleSpacing = 380;
-    const passDelay = 420;
+    const riffleSpacing = 330;
+    const passDelay = 950;
 
     for (let pass = 0; pass < riffles; pass++) {
       const baseDelay = pass * passDelay;
@@ -512,7 +522,7 @@
       for (let i = 0; i < cardsPerPile; i++) {
         const side = i % 2 === 0 ? -1 : 1;
         const pileIndex = Math.floor(i / 2);
-        const fanDelay = baseDelay + i * 28;
+        const fanDelay = baseDelay + i * 68;
         const rotEnd = side * (8 + pileIndex * 5);
         const xEnd = side * (riffleSpacing / 2 + pileIndex * 12);
         const yEnd = -16 - pileIndex * 4;
@@ -525,16 +535,16 @@
           top: `${rect.top}px`,
           width: `${rect.width}px`,
           height: `${rect.height}px`,
-          "--motion-translate-x": `${xEnd}px`,
-          "--motion-translate-y": `${yEnd}px`,
-          "--motion-mid-translate-x": `${xEnd * 0.5}px`,
-          "--motion-mid-translate-y": `${yEnd - 18}px`,
-          "--motion-tilt": `${rotEnd}deg`,
-          "--motion-duration": `${160}ms`,
-          "--motion-ease": "cubic-bezier(0.25, 0.46, 0.45, 0.94)",
-          "--motion-final-opacity": "0.88",
           opacity: "0",
         });
+        ghost.style.setProperty("--motion-translate-x", `${xEnd}px`);
+        ghost.style.setProperty("--motion-translate-y", `${yEnd}px`);
+        ghost.style.setProperty("--motion-mid-translate-x", `${xEnd * 0.5}px`);
+        ghost.style.setProperty("--motion-mid-translate-y", `${yEnd - 18}px`);
+        ghost.style.setProperty("--motion-tilt", `${rotEnd}deg`);
+        ghost.style.setProperty("--motion-duration", "420ms");
+        ghost.style.setProperty("--motion-ease", "cubic-bezier(0.25, 0.46, 0.45, 0.94)");
+        ghost.style.setProperty("--motion-final-opacity", "0.88");
         layer.appendChild(ghost);
 
         const startTimer = setTimeout(() => {
@@ -543,19 +553,19 @@
         }, fanDelay);
 
         // Merge back phase: cards return to deck
-        const mergeDelay = fanDelay + 175 + i * 22;
+        const mergeDelay = fanDelay + 480 + i * 34;
         const mergeTimer = setTimeout(() => {
           ghost.style.setProperty("--motion-translate-x", "0px");
           ghost.style.setProperty("--motion-translate-y", "0px");
           ghost.style.setProperty("--motion-mid-translate-x", `${xEnd * 0.5}px`);
           ghost.style.setProperty("--motion-mid-translate-y", `${yEnd * 0.6}px`);
           ghost.style.setProperty("--motion-tilt", "0deg");
-          ghost.style.setProperty("--motion-duration", "155ms");
+          ghost.style.setProperty("--motion-duration", "390ms");
           ghost.style.setProperty("--motion-final-opacity", "0");
           ghost.classList.remove("running");
           void ghost.offsetWidth;
           ghost.classList.add("running");
-          setTimeout(() => ghost.remove(), 240);
+          setTimeout(() => ghost.remove(), 520);
         }, mergeDelay);
 
         motionState.timers.push(startTimer, mergeTimer);
@@ -1370,11 +1380,11 @@
     }
 
     state.aiTurnsScheduled = true;
-    let delay = 320;
+    let delay = 560;
 
     for (const player of state.players.filter((candidate) => candidate.type === "ai" && !candidate.lockedIn)) {
       scheduleAction(delay, () => commitAiPlay(player.id));
-      delay += 260;
+      delay += 480;
     }
 
     if (state.players.every((player) => player.lockedIn)) {
@@ -1786,7 +1796,7 @@
     addLog("round", "All players are locked in. Support cards stay visible before the attacks flip.");
     render();
 
-    scheduleAction(450, () => {
+    scheduleAction(1600, () => {
       state.phase = "revealAttacks";
       state.revealPulsePlayerIds = state.players
         .map((player) => player.id)
@@ -1812,12 +1822,12 @@
           .join("; ")}.`
       );
       render();
-      scheduleAction(220, () => {
+      scheduleAction(900, () => {
         state.revealPulsePlayerIds = [];
         render();
       });
 
-      scheduleAction(520, resolveRound);
+      scheduleAction(1700, resolveRound);
     });
   }
 
@@ -2418,7 +2428,7 @@
       state.phase = "cleanup";
       render();
 
-      scheduleAction(900, beginNextRound);
+      scheduleAction(3400, beginNextRound);
     };
 
     resolveHandLimitOverflow();
@@ -2525,7 +2535,7 @@
     state.phase = "cleanup";
     render();
 
-    scheduleAction(900, beginNextRound);
+    scheduleAction(3400, beginNextRound);
   }
 
   function resolveCommittedSwaps() {
@@ -2652,7 +2662,7 @@
     addLog("round", `Round ${state.roundNumber} begins.`);
     render();
 
-    scheduleAction(240, prepareRound);
+    scheduleAction(650, prepareRound);
   }
 
   function finishGame(reasonText) {
@@ -2909,14 +2919,18 @@
       return;
     }
 
+    const pace = MOTION_PACE_BY_VARIANT[variant] || MOTION_PACE_BY_VARIANT.travel;
+    const pacedDuration = Math.round(duration * pace);
+    const pacedDelay = Math.round(delay * (variant === "deal" ? 1.15 : 1.65));
+
     motionState.pending.push({
       id: `motion-${motionState.sequence += 1}`,
       from,
       sourceRect: getElementMotionRect(getMotionElement(from)),
       to,
       ghostHtml,
-      duration,
-      delay,
+      duration: pacedDuration,
+      delay: pacedDelay,
       variant,
     });
   }
@@ -2933,11 +2947,12 @@
 
     motionState.rafHandle = requestAnimationFrame(() => {
       motionState.rafHandle = null;
-      motions.forEach((motion) => {
+      motions.forEach((motion, index) => {
+        const sequenceDelay = motion.variant === "deal" ? 0 : index * 180;
         const timerId = setTimeout(() => {
           motionState.timers = motionState.timers.filter((candidate) => candidate !== timerId);
           playCardMotion(motion);
-        }, Math.max(0, motion.delay || 0));
+        }, Math.max(0, (motion.delay || 0) + sequenceDelay));
         motionState.timers.push(timerId);
       });
     });
@@ -2956,10 +2971,12 @@
     ghost.className = `card-motion-ghost motion-${escapeHtml(motion.variant || "travel")}`;
     ghost.innerHTML = motion.ghostHtml;
 
-    const scaleX = targetRect.width / sourceRect.width;
-    const scaleY = targetRect.height / sourceRect.height;
-    const deltaX = targetRect.left - sourceRect.left;
-    const deltaY = targetRect.top - sourceRect.top;
+    const scaleX = Math.max(0.42, Math.min(1.55, targetRect.width / sourceRect.width));
+    const scaleY = Math.max(0.42, Math.min(1.55, targetRect.height / sourceRect.height));
+    const targetCardWidth = sourceRect.width * scaleX;
+    const targetCardHeight = sourceRect.height * scaleY;
+    const deltaX = targetRect.left + (targetRect.width - targetCardWidth) * 0.5 - sourceRect.left;
+    const deltaY = targetRect.top + (targetRect.height - targetCardHeight) * 0.5 - sourceRect.top;
     const variantSettings = getMotionVariantSettings(motion.variant, deltaX, deltaY);
     const tilt = variantSettings.tilt;
     const midTranslateX = deltaX * variantSettings.midpoint;
@@ -2988,19 +3005,19 @@
       top: `${sourceRect.top}px`,
       width: `${sourceRect.width}px`,
       height: `${sourceRect.height}px`,
-      "--motion-translate-x": `${deltaX}px`,
-      "--motion-translate-y": `${deltaY}px`,
-      "--motion-mid-translate-x": `${midTranslateX}px`,
-      "--motion-mid-translate-y": `${midTranslateY}px`,
-      "--motion-scale-x": `${scaleX}`,
-      "--motion-scale-y": `${scaleY}`,
-      "--motion-mid-scale-x": `${midScaleX}`,
-      "--motion-mid-scale-y": `${midScaleY}`,
-      "--motion-tilt": `${tilt}deg`,
-      "--motion-duration": `${motion.duration}ms`,
-      "--motion-final-opacity": `${variantSettings.finalOpacity}`,
-      "--motion-ease": variantSettings.easing,
     });
+    ghost.style.setProperty("--motion-translate-x", `${deltaX}px`);
+    ghost.style.setProperty("--motion-translate-y", `${deltaY}px`);
+    ghost.style.setProperty("--motion-mid-translate-x", `${midTranslateX}px`);
+    ghost.style.setProperty("--motion-mid-translate-y", `${midTranslateY}px`);
+    ghost.style.setProperty("--motion-scale-x", `${scaleX}`);
+    ghost.style.setProperty("--motion-scale-y", `${scaleY}`);
+    ghost.style.setProperty("--motion-mid-scale-x", `${midScaleX}`);
+    ghost.style.setProperty("--motion-mid-scale-y", `${midScaleY}`);
+    ghost.style.setProperty("--motion-tilt", `${tilt}deg`);
+    ghost.style.setProperty("--motion-duration", `${motion.duration}ms`);
+    ghost.style.setProperty("--motion-final-opacity", `${variantSettings.finalOpacity}`);
+    ghost.style.setProperty("--motion-ease", variantSettings.easing);
 
     refs.cardMotionLayer.appendChild(ghost);
 

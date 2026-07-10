@@ -19,6 +19,11 @@
   let lastHandSignature = "";
   let lastBannerText = resultBanner?.textContent || "";
   let wasGameMode = false;
+  let tooltipElement = null;
+  let tooltipAnchor = null;
+  let tooltipPinned = false;
+  let tooltipHideTimer = 0;
+  let phaseAnnouncer = null;
 
   function syncMode() {
     const gameMode = Boolean(gameScreen && !gameScreen.classList.contains("hidden"));
@@ -126,6 +131,125 @@
     flare.addEventListener("animationend", () => flare.remove(), { once: true });
   }
 
+  function ensureTooltip() {
+    if (tooltipElement) return tooltipElement;
+    tooltipElement = document.createElement("div");
+    tooltipElement.className = "card-info-popover";
+    tooltipElement.setAttribute("role", "tooltip");
+    tooltipElement.setAttribute("aria-live", "polite");
+    cinematicLayer?.appendChild(tooltipElement);
+    return tooltipElement;
+  }
+
+  function prepareTooltipTargets(scope = document) {
+    scope.querySelectorAll?.("[data-tooltip]").forEach((target) => {
+      const nativeTitle = target.getAttribute("title");
+      if (nativeTitle) {
+        target.setAttribute("aria-label", nativeTitle);
+        target.removeAttribute("title");
+      }
+    });
+  }
+
+  function positionTooltip(anchorRect) {
+    if (!tooltipElement || !anchorRect) return;
+    const tooltipRect = tooltipElement.getBoundingClientRect();
+    const gutter = 12;
+    const roomAbove = anchorRect.top - tooltipRect.height - 16;
+    const placeBelow = roomAbove < gutter;
+    const desiredLeft = anchorRect.left + anchorRect.width * 0.5 - tooltipRect.width * 0.5;
+    const left = Math.max(gutter, Math.min(window.innerWidth - tooltipRect.width - gutter, desiredLeft));
+    const top = placeBelow
+      ? Math.min(window.innerHeight - tooltipRect.height - gutter, anchorRect.bottom + 16)
+      : roomAbove;
+
+    tooltipElement.dataset.placement = placeBelow ? "below" : "above";
+    tooltipElement.style.left = `${left}px`;
+    tooltipElement.style.top = `${Math.max(gutter, top)}px`;
+    tooltipElement.style.setProperty(
+      "--tooltip-arrow-x",
+      `${Math.max(18, Math.min(tooltipRect.width - 18, anchorRect.left + anchorRect.width * 0.5 - left))}px`
+    );
+  }
+
+  function showTooltip(target, { pinned = false } = {}) {
+    const copy = target?.dataset?.tooltip;
+    if (!copy || !cinematicLayer) return;
+    window.clearTimeout(tooltipHideTimer);
+    tooltipAnchor = target;
+    tooltipPinned = pinned;
+    const anchorRect = target.getBoundingClientRect();
+    const tooltip = ensureTooltip();
+    tooltip.textContent = copy;
+    tooltip.classList.add("visible");
+    requestAnimationFrame(() => positionTooltip(anchorRect));
+
+    if (pinned) {
+      tooltipHideTimer = window.setTimeout(() => hideTooltip(true), 3600);
+    }
+  }
+
+  function hideTooltip(force = false) {
+    if (tooltipPinned && !force) return;
+    window.clearTimeout(tooltipHideTimer);
+    tooltipPinned = false;
+    tooltipAnchor = null;
+    tooltipElement?.classList.remove("visible");
+  }
+
+  function handleTooltipOver(event) {
+    const target = event.target.closest?.("[data-tooltip]");
+    if (!target) return;
+    showTooltip(target);
+  }
+
+  function handleTooltipOut(event) {
+    const target = event.target.closest?.("[data-tooltip]");
+    if (!target || target.contains(event.relatedTarget)) return;
+    tooltipHideTimer = window.setTimeout(() => hideTooltip(), 120);
+  }
+
+  function handleTooltipPress(event) {
+    const target = event.target.closest?.("[data-tooltip]");
+    if (target) {
+      showTooltip(target, { pinned: true });
+    } else {
+      hideTooltip(true);
+    }
+  }
+
+  function announcePhase(text) {
+    if (!text || /choose cards/i.test(text) || reducedMotion || !cinematicLayer) return;
+    phaseAnnouncer?.remove();
+
+    let headline = text;
+    let kicker = "TABLE IN MOTION";
+    if (/reveal supports/i.test(text)) {
+      headline = "Supports up";
+      kicker = "Effects are public";
+    } else if (/reveal attacks/i.test(text)) {
+      headline = "Attacks flip";
+      kicker = "No more hiding";
+    } else if (/wins the round/i.test(text)) {
+      kicker = "Round decided";
+    } else if (/plunder/i.test(text)) {
+      kicker = "Winner's choice";
+    }
+
+    phaseAnnouncer = document.createElement("div");
+    phaseAnnouncer.className = "phase-announcer";
+    const kickerElement = document.createElement("span");
+    const headlineElement = document.createElement("strong");
+    kickerElement.textContent = kicker;
+    headlineElement.textContent = headline;
+    phaseAnnouncer.append(kickerElement, headlineElement);
+    cinematicLayer.appendChild(phaseAnnouncer);
+    phaseAnnouncer.addEventListener("animationend", () => {
+      phaseAnnouncer?.remove();
+      phaseAnnouncer = null;
+    }, { once: true });
+  }
+
   function impactAt(x, y, particleCount = 10) {
     if (!cinematicLayer || reducedMotion) return;
 
@@ -174,6 +298,7 @@
   function animateHandIfChanged() {
     if (!handCards || reducedMotion) return;
     const cards = [...handCards.querySelectorAll(".card-tile[data-hand-card-id]")];
+    prepareTooltipTargets(handCards);
     const signature = cards.map((card) => card.dataset.handCardId).join("|");
     if (!signature || signature === lastHandSignature) return;
     lastHandSignature = signature;
@@ -218,6 +343,12 @@
   document.addEventListener("pointermove", updateCardTilt, { passive: true });
   document.addEventListener("pointerout", resetCardTilt, { passive: true });
   document.addEventListener("pointerdown", addButtonRipple, { passive: true });
+  document.addEventListener("pointerover", handleTooltipOver, { passive: true });
+  document.addEventListener("pointerout", handleTooltipOut, { passive: true });
+  document.addEventListener("pointerdown", handleTooltipPress, true);
+  document.addEventListener("contextmenu", handleTooltipPress, true);
+  document.addEventListener("focusin", handleTooltipOver);
+  document.addEventListener("focusout", handleTooltipOut);
   document.addEventListener("click", addSelectionFlare, true);
 
   startForm?.addEventListener("submit", () => {
@@ -233,6 +364,8 @@
       const nextText = resultBanner.textContent || "";
       if (nextText && nextText !== lastBannerText) {
         lastBannerText = nextText;
+        hideTooltip(true);
+        announcePhase(nextText);
         hitArena();
       }
     }).observe(resultBanner, { childList: true, characterData: true, subtree: true });
@@ -251,5 +384,6 @@
   }
 
   syncMode();
+  prepareTooltipTargets();
   animateHandIfChanged();
 })();
