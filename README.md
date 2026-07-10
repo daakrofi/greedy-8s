@@ -20,4 +20,10 @@ Then visit `http://localhost:4173`.
 - Use **Draw 1** for one of your limited deck draws.
 - Press **Play** when your move is valid.
 
-The game logic lives in `app.js`. The reimagined presentation layer is isolated in `reimagined.css`.
+The game logic lives in `app.js` and remains isolated from the presentation work.
+
+The visual system is layered deliberately:
+
+- `reimagined.css` provides the responsive layout foundation.
+- `spectacle.css` contains the cinematic art direction and advanced motion styling.
+- `cinematics.js` reacts to rendered game events with 3D tilt, staged deals, particles, shockwaves, and phase impacts without changing rules or state.

@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="theme-color" content="#090b0a" />
+    <meta name="theme-color" content="#130a14" />
     <meta
       name="description"
       content="Greedy 8s — a ruthless card game of attacking, outmaneuvering, and plundering."
@@ -11,9 +11,17 @@
     <title>Greedy 8s</title>
     <link rel="stylesheet" href="./styles.css" />
     <link rel="stylesheet" href="./reimagined.css" />
+    <link rel="stylesheet" href="./spectacle.css" />
     <script defer src="./app.js"></script>
+    <script defer src="./cinematics.js"></script>
   </head>
   <body class="ui-reimagined">
+    <div class="atmosphere" aria-hidden="true">
+      <span class="atmosphere-orb atmosphere-orb-a"></span>
+      <span class="atmosphere-orb atmosphere-orb-b"></span>
+      <span class="atmosphere-beam"></span>
+      <span class="atmosphere-grain"></span>
+    </div>
     <div id="app" class="app-shell">
       <header class="app-topline">
         <div class="brand-mark">
@@ -33,8 +41,17 @@
             <span class="hero-suit">♦</span>
             <span class="hero-suit">♣</span>
           </div>
+          <div class="hero-card-sculpture" aria-hidden="true">
+            <span class="sculpture-halo"></span>
+            <span class="sculpture-card sculpture-card-1" data-glyph="8♠"></span>
+            <span class="sculpture-card sculpture-card-2" data-glyph="A♥"></span>
+            <span class="sculpture-card sculpture-card-3" data-glyph="7♦"></span>
+            <span class="sculpture-card sculpture-card-4" data-glyph="K♣"></span>
+            <span class="sculpture-core">8</span>
+          </div>
+          <div class="hero-coordinate" aria-hidden="true">TABLE 08 / LDN / AFTER DARK</div>
           <div class="hero-copy">
-            <p class="hero-overline">A game of nerve &amp; appetite</p>
+            <p class="hero-overline">Nerve in. Mercy out.</p>
             <h2 class="hero-title">Greedy<br /><em>8s</em></h2>
             <p class="subtitle">Attack. Outmaneuver. Plunder.</p>
           </div>
@@ -58,7 +75,7 @@
                 <option value="4" selected>4</option>
               </select>
             </label>
-            <button id="start-btn" class="primary-button" type="submit">Start Game</button>
+            <button id="start-btn" class="primary-button" type="submit"><span>Enter the arena</span></button>
             <p class="hint">4 players uses 5-card starting hands. 2-3 players use 7.</p>
           </form>
         </section>
@@ -73,6 +90,9 @@
                 <div id="west-seat" class="seat-slot seat-slot-west"></div>
 
                 <section class="board-panel">
+                  <div class="arena-rings" aria-hidden="true">
+                    <span></span><span></span><span></span>
+                  </div>
                   <div class="board-header">
                     <div>
                       <p class="eyebrow">Arena</p>
@@ -167,6 +187,7 @@
     </div>
 
     <div id="card-motion-layer" class="card-motion-layer" aria-hidden="true"></div>
+    <div id="cinematic-layer" class="cinematic-layer" aria-hidden="true"></div>
 
     <div id="rules-modal" class="modal hidden" aria-hidden="true">
       <div class="modal-card panel">
